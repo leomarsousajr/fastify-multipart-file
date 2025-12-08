@@ -1,0 +1,47 @@
+{
+  "name": "fastify-multipart-file",
+  "version": "1.0.1",
+  "description": "Fastify plugin for handling multipart/form-data with file validation, type coercion, and nested object support",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leomarsousajr/fastify-multipart-file.git"
+  },
+  "scripts": {
+    "build": "npx tsc",
+    "dev": "npx tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "fastify",
+    "multipart",
+    "file-upload",
+    "form-data",
+    "validation",
+    "typescript"
+  ],
+  "author": "Grupo Unicad | Leomar Feitosa",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/multipart": "^9.0.0"
+  },
+  "peerDependencies": {
+    "fastify": "^4.0.0 || ^5.0.0"
+  },
+  "devDependencies": {
+    "@fastify/multipart": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "fastify": "^5.0.0",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "src/fastify.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
