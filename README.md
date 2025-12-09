@@ -24,8 +24,8 @@ npm install fastify-multipart-file
 ### Basic Setup
 
 ```typescript
-import Fastify from 'fastify';
-import { register as multipartHandler } from 'fastify-multipart-file';
+import Fastify from "fastify";
+import { register as multipartHandler } from "fastify-multipart-file";
 
 const fastify = Fastify();
 
@@ -38,18 +38,21 @@ await fastify.listen({ port: 3000 });
 ### Example Route with File Upload
 
 ```typescript
-import S from 'fluent-json-schema';
+import S from "fluent-json-schema";
 
-fastify.post('/upload', {
+fastify.post("/upload", {
   schema: {
     body: S.object()
-      .prop('name', S.string().required())
-      .prop('age', S.number())
-      .prop('isActive', S.boolean())
-      .prop('avatar', S.string().format('binary')
-        .maxLength(5 * 1024 * 1024) // 5MB max
-        .raw({ accept: ['image/jpeg', 'image/png', 'image/gif'] })
-      )
+      .prop("name", S.string().required())
+      .prop("age", S.number())
+      .prop("isActive", S.boolean())
+      .prop(
+        "avatar",
+        S.string()
+          .format("binary")
+          .maxLength(5 * 1024 * 1024) // 5MB max
+          .raw({ accept: ["image/jpeg", "image/png", "image/gif"] })
+      ),
   },
   handler: async (request, reply) => {
     const { name, age, isActive, avatar } = request.body;
@@ -65,21 +68,21 @@ fastify.post('/upload', {
     console.log(avatar.originalName); // Original filename
 
     return { success: true };
-  }
+  },
 });
 ```
 
 ### Nested Objects and Arrays
 
 ```typescript
-fastify.post('/nested', {
+fastify.post("/nested", {
   schema: {
     body: S.object()
-      .prop('items[0].name', S.string())
-      .prop('items[0].quantity', S.number())
-      .prop('items[1].name', S.string())
-      .prop('items[1].quantity', S.number())
-      .prop('metadata.tags', S.array())
+      .prop("items[0].name", S.string())
+      .prop("items[0].quantity", S.number())
+      .prop("items[1].name", S.string())
+      .prop("items[1].quantity", S.number())
+      .prop("metadata.tags", S.array()),
   },
   handler: async (request, reply) => {
     const { items, metadata } = request.body;
@@ -91,7 +94,178 @@ fastify.post('/nested', {
     // metadata is: { tags: [...] }
 
     return { success: true };
-  }
+  },
+});
+```
+
+### Multiple File Uploads
+
+The plugin supports multiple file uploads in the same request using different field names or array notation.
+
+#### Option 1: Different Field Names
+
+```typescript
+fastify.post("/upload-multiple", {
+  schema: {
+    body: S.object()
+      .prop("name", S.string().required())
+      .prop(
+        "avatar",
+        S.string()
+          .format("binary")
+          .maxLength(5 * 1024 * 1024) // 5MB max
+          .raw({ accept: ["image/jpeg", "image/png"] })
+      )
+      .prop(
+        "document",
+        S.string()
+          .format("binary")
+          .maxLength(10 * 1024 * 1024) // 10MB max
+          .raw({ accept: ["application/pdf"] })
+      )
+      .prop(
+        "thumbnail",
+        S.string()
+          .format("binary")
+          .maxLength(1 * 1024 * 1024) // 1MB max
+          .raw({ accept: ["image/png", "image/gif"] })
+      ),
+  },
+  handler: async (request, reply) => {
+    const { name, avatar, document, thumbnail } = request.body;
+
+    // Process multiple files
+    console.log("Avatar:", avatar.originalName, avatar.size);
+    console.log("Document:", document.originalName, document.size);
+    console.log("Thumbnail:", thumbnail.originalName, thumbnail.size);
+
+    // Save files to storage
+    await saveFile(avatar.buffer, avatar.name);
+    await saveFile(document.buffer, document.name);
+    await saveFile(thumbnail.buffer, thumbnail.name);
+
+    return {
+      success: true,
+      files: {
+        avatar: avatar.name,
+        document: document.name,
+        thumbnail: thumbnail.name,
+      },
+    };
+  },
+});
+```
+
+#### Option 2: Array of Files
+
+```typescript
+fastify.post("/upload-array", {
+  schema: {
+    body: S.object()
+      .prop("title", S.string().required())
+      .prop(
+        "images[0]",
+        S.string()
+          .format("binary")
+          .maxLength(5 * 1024 * 1024)
+          .raw({ accept: ["image/jpeg", "image/png"] })
+      )
+      .prop(
+        "images[1]",
+        S.string()
+          .format("binary")
+          .maxLength(5 * 1024 * 1024)
+          .raw({ accept: ["image/jpeg", "image/png"] })
+      )
+      .prop(
+        "images[2]",
+        S.string()
+          .format("binary")
+          .maxLength(5 * 1024 * 1024)
+          .raw({ accept: ["image/jpeg", "image/png"] })
+      ),
+  },
+  handler: async (request, reply) => {
+    const { title, images } = request.body;
+
+    // images is an array of File objects
+    console.log(`Received ${images.length} images for: ${title}`);
+
+    const uploadedFiles = [];
+    for (const [index, image] of images.entries()) {
+      console.log(`Image ${index}:`, image.originalName, image.size);
+      await saveFile(image.buffer, image.name);
+      uploadedFiles.push(image.name);
+    }
+
+    return {
+      success: true,
+      title,
+      filesCount: images.length,
+      files: uploadedFiles,
+    };
+  },
+});
+```
+
+#### Option 3: Mixed Files and Data
+
+```typescript
+fastify.post("/product", {
+  schema: {
+    body: S.object()
+      .prop("name", S.string().required())
+      .prop("price", S.number().required())
+      .prop("description", S.string())
+      .prop("inStock", S.boolean())
+      .prop(
+        "mainImage",
+        S.string()
+          .format("binary")
+          .maxLength(5 * 1024 * 1024)
+          .raw({ accept: ["image/jpeg", "image/png"] })
+      )
+      .prop(
+        "gallery[0]",
+        S.string()
+          .format("binary")
+          .maxLength(3 * 1024 * 1024)
+          .raw({ accept: ["image/jpeg", "image/png"] })
+      )
+      .prop(
+        "gallery[1]",
+        S.string()
+          .format("binary")
+          .maxLength(3 * 1024 * 1024)
+          .raw({ accept: ["image/jpeg", "image/png"] })
+      )
+      .prop(
+        "manual",
+        S.string()
+          .format("binary")
+          .maxLength(20 * 1024 * 1024)
+          .raw({ accept: ["application/pdf"] })
+      ),
+  },
+  handler: async (request, reply) => {
+    const { name, price, description, inStock, mainImage, gallery, manual } =
+      request.body;
+
+    // Save product data
+    const product = {
+      name, // string
+      price, // number (auto-converted)
+      description, // string
+      inStock, // boolean (auto-converted)
+      mainImageUrl: await uploadToS3(mainImage.buffer, mainImage.name),
+      galleryUrls: await Promise.all(
+        gallery.map((img) => uploadToS3(img.buffer, img.name))
+      ),
+      manualUrl: await uploadToS3(manual.buffer, manual.name),
+    };
+
+    return { success: true, product };
+  },
 });
 ```
 
@@ -100,6 +274,7 @@ fastify.post('/nested', {
 The plugin adds two Fastify hooks:
 
 1. **preValidation Hook**: Processes multipart fields before validation
+
    - Detects file uploads and validates them
    - Converts string values to appropriate types based on schema
    - Handles nested object notation
@@ -114,9 +289,9 @@ The plugin adds two Fastify hooks:
 
 ```typescript
 S.string()
-  .format('binary')
+  .format("binary")
   .maxLength(5 * 1024 * 1024) // Maximum file size in bytes
-  .raw({ accept: ['image/jpeg', 'image/png'] }) // Allowed MIME types
+  .raw({ accept: ["image/jpeg", "image/png"] }); // Allowed MIME types
 ```
 
 ### Type Coercion Schema
@@ -160,20 +335,20 @@ import {
   UuidHelper,
 
   // Type Guards
-  isValidationError
-} from '@leomarsousajr/fastify-multipart-file';
+  isValidationError,
+} from "fastify-multipart-file";
 ```
 
 ### File Class
 
 ```typescript
 class File {
-  name?: string;           // Generated unique filename with extension
-  mimetype?: string;       // MIME type (e.g., 'image/jpeg')
-  encoding?: string;       // Encoding (e.g., '7bit')
-  buffer: Buffer;          // File content as Buffer
-  size: number;            // File size in bytes
-  originalName?: string;   // Original filename from upload
+  name?: string; // Generated unique filename with extension
+  mimetype?: string; // MIME type (e.g., 'image/jpeg')
+  encoding?: string; // Encoding (e.g., '7bit')
+  buffer: Buffer; // File content as Buffer
+  size: number; // File size in bytes
+  originalName?: string; // Original filename from upload
 }
 ```
 
@@ -190,13 +365,14 @@ Converts a raw file upload to a processed File object with a unique name.
 ### Error Handling
 
 The plugin throws `UnprocessedEntityError` (HTTP 422) when:
+
 - File size exceeds `maxLength`
 - File MIME type is not in the `accept` list
 
 The error follows a standard validation error format:
 
 ```typescript
-import { isValidationError, ValidationError } from 'fastify-multipart-file';
+import { isValidationError, ValidationError } from "fastify-multipart-file";
 
 try {
   // Handle multipart request
@@ -218,6 +394,7 @@ try {
 ```
 
 **Error Response Format:**
+
 ```json
 {
   "statusCode": 422,
@@ -261,13 +438,15 @@ fastify.post('/custom', async (request, reply) {
 import {
   isValidFileField,
   validateFileSize,
-  validateFileMimeType
-} from 'fastify-multipart-file';
+  validateFileMimeType,
+} from "fastify-multipart-file";
 
 // Manually validate files if needed
-const file = { /* File object */ };
-validateFileSize(file, 1024 * 1024, 'avatar'); // Throws if > 1MB
-validateFileMimeType(file, ['image/jpeg'], 'avatar'); // Throws if not JPEG
+const file = {
+  /* File object */
+};
+validateFileSize(file, 1024 * 1024, "avatar"); // Throws if > 1MB
+validateFileMimeType(file, ["image/jpeg"], "avatar"); // Throws if not JPEG
 ```
 
 ## Requirements

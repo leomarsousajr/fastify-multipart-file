@@ -21,7 +21,7 @@
     "validation",
     "typescript"
   ],
-  "author": "Grupo Unicad | Leomar Feitosa",
+  "author": "Leomar Feitosa",
   "license": "MIT",
   "dependencies": {
     "@fastify/multipart": "^9.0.0"
