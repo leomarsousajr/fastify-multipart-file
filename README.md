@@ -25,12 +25,21 @@ npm install fastify-multipart-file
 
 ```typescript
 import Fastify from "fastify";
-import { register as multipartHandler } from "fastify-multipart-file";
+import { register as FastifyRegisterMultipartFile } from "fastify-multipart-file";
 
-const fastify = Fastify();
+const fastify = Fastify({
+  ajv: {
+    customOptions: {
+      strict: false,
+      removeAdditional: true,
+      useDefaults: true,
+      coerceTypes: true,
+    },
+  },
+});
 
 // Register the multipart handler (includes @fastify/multipart automatically)
-await fastify.register(multipartHandler);
+await FastifyRegisterMultipartFile(fastify);
 
 await fastify.listen({ port: 3000 });
 ```
@@ -47,25 +56,29 @@ fastify.post("/upload", {
       .prop("age", S.number())
       .prop("isActive", S.boolean())
       .prop(
-        "avatar",
-        S.string()
-          .format("binary")
-          .maxLength(5 * 1024 * 1024) // 5MB max
-          .raw({ accept: ["image/jpeg", "image/png", "image/gif"] })
+        'image',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Image file (max size: 5MB)',
+          maxLength: 5 * 1024 * 1024,
+          accept: ["image/jpeg", "image/png", "image/gif"],
+        }),
       ),
   },
   handler: async (request, reply) => {
-    const { name, age, isActive, avatar } = request.body;
+    const { name, age, isActive, image } = request.body;
 
     // 'name' is string
     // 'age' is number (auto-converted)
     // 'isActive' is boolean (auto-converted)
-    // 'avatar' is File object with buffer
+    // 'image' is File object with buffer
 
-    console.log(avatar.buffer); // Buffer
-    console.log(avatar.mimetype); // e.g., 'image/jpeg'
-    console.log(avatar.size); // File size in bytes
-    console.log(avatar.originalName); // Original filename
+    console.log(image.buffer); // Buffer
+    console.log(image.mimetype); // e.g., 'image/jpeg'
+    console.log(image.size); // File size in bytes
+    console.log(image.originalName); // Original filename
 
     return { success: true };
   },
@@ -110,44 +123,56 @@ fastify.post("/upload-multiple", {
     body: S.object()
       .prop("name", S.string().required())
       .prop(
-        "avatar",
-        S.string()
-          .format("binary")
-          .maxLength(5 * 1024 * 1024) // 5MB max
-          .raw({ accept: ["image/jpeg", "image/png"] })
+        'image',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Image file (max size: 5MB)',
+          maxLength: 5 * 1024 * 1024,
+          accept: ["image/jpeg", "image/png"],
+        }),
       )
       .prop(
-        "document",
-        S.string()
-          .format("binary")
-          .maxLength(10 * 1024 * 1024) // 10MB max
-          .raw({ accept: ["application/pdf"] })
+        'document',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Document file (max size: 10MB)',
+          maxLength: 10 * 1024 * 1024,
+          accept: ["application/pdf"],
+        }),
       )
       .prop(
-        "thumbnail",
-        S.string()
-          .format("binary")
-          .maxLength(1 * 1024 * 1024) // 1MB max
-          .raw({ accept: ["image/png", "image/gif"] })
+        'thumbnail',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Image file (max size: 1MB)',
+          maxLength: 1 * 1024 * 1024,
+          accept: ["image/png", "image/gif"],
+        }),
       ),
   },
   handler: async (request, reply) => {
-    const { name, avatar, document, thumbnail } = request.body;
+    const { name, image, document, thumbnail } = request.body;
 
     // Process multiple files
-    console.log("Avatar:", avatar.originalName, avatar.size);
+    console.log("Image:", image.originalName, image.size);
     console.log("Document:", document.originalName, document.size);
     console.log("Thumbnail:", thumbnail.originalName, thumbnail.size);
 
     // Save files to storage
-    await saveFile(avatar.buffer, avatar.name);
+    await saveFile(image.buffer, image.name);
     await saveFile(document.buffer, document.name);
     await saveFile(thumbnail.buffer, thumbnail.name);
 
     return {
       success: true,
       files: {
-        avatar: avatar.name,
+        image: image.name,
         document: document.name,
         thumbnail: thumbnail.name,
       },
@@ -164,25 +189,37 @@ fastify.post("/upload-array", {
     body: S.object()
       .prop("title", S.string().required())
       .prop(
-        "images[0]",
-        S.string()
-          .format("binary")
-          .maxLength(5 * 1024 * 1024)
-          .raw({ accept: ["image/jpeg", "image/png"] })
+        'images[0]',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Image file (max size: 5MB)',
+          maxLength: 5 * 1024 * 1024,
+          accept: ["image/jpeg", "image/png"],
+        }),
       )
       .prop(
-        "images[1]",
-        S.string()
-          .format("binary")
-          .maxLength(5 * 1024 * 1024)
-          .raw({ accept: ["image/jpeg", "image/png"] })
+        'images[1]',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Image file (max size: 5MB)',
+          maxLength: 5 * 1024 * 1024,
+          accept: ["image/jpeg", "image/png"],
+        }),
       )
       .prop(
-        "images[2]",
-        S.string()
-          .format("binary")
-          .maxLength(5 * 1024 * 1024)
-          .raw({ accept: ["image/jpeg", "image/png"] })
+        'images[2]',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Image file (max size: 5MB)',
+          maxLength: 5 * 1024 * 1024,
+          accept: ["image/jpeg", "image/png"],
+        }),
       ),
   },
   handler: async (request, reply) => {
@@ -219,32 +256,48 @@ fastify.post("/product", {
       .prop("description", S.string())
       .prop("inStock", S.boolean())
       .prop(
-        "mainImage",
-        S.string()
-          .format("binary")
-          .maxLength(5 * 1024 * 1024)
-          .raw({ accept: ["image/jpeg", "image/png"] })
+        'mainImage',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Image file (max size: 5MB)',
+          maxLength: 5 * 1024 * 1024,
+          accept: ["image/jpeg", "image/png"],
+        }),
       )
       .prop(
-        "gallery[0]",
-        S.string()
-          .format("binary")
-          .maxLength(3 * 1024 * 1024)
-          .raw({ accept: ["image/jpeg", "image/png"] })
+        'gallery[0]',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Image file (max size: 3MB)',
+          maxLength: 3 * 1024 * 1024,
+          accept: ["image/jpeg", "image/png"],
+        }),
       )
       .prop(
-        "gallery[1]",
-        S.string()
-          .format("binary")
-          .maxLength(3 * 1024 * 1024)
-          .raw({ accept: ["image/jpeg", "image/png"] })
+        'gallery[1]',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Image file (max size: 3MB)',
+          maxLength: 3 * 1024 * 1024,
+          accept: ["image/jpeg", "image/png"],
+        }),
       )
       .prop(
-        "manual",
-        S.string()
-          .format("binary")
-          .maxLength(20 * 1024 * 1024)
-          .raw({ accept: ["application/pdf"] })
+        'manual',
+        S.object().raw({
+          type: 'string',
+          typeFile: true,
+          format: 'binary',
+          description: 'Manual file (max size: 20MB)',
+          maxLength: 20 * 1024 * 1024,
+          accept: ["application/pdf"],
+        }),
       ),
   },
   handler: async (request, reply) => {
