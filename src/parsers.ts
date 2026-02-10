@@ -1,20 +1,23 @@
-import { JsonHelper } from './helpers/json.helper';
-import { SchemaProperty, SerializedFile, ProcessedFile } from './types';
+import { JsonHelper } from "./utils/json.helper";
+import { SchemaProperty, SerializedFile, ProcessedFile } from "./types";
 
-export const parseFieldValue = (value: string, property?: SchemaProperty): unknown => {
+export const parseFieldValue = (
+  value: string,
+  property?: SchemaProperty,
+): unknown => {
   let inferredType = property?.type;
 
   if (!inferredType) {
-    if (value === 'true' || value === 'false') {
-      inferredType = 'boolean';
+    if (value === "true" || value === "false") {
+      inferredType = "boolean";
     } else if (/^-?\d+$/.test(value)) {
-      inferredType = 'integer';
+      inferredType = "integer";
     } else if (/^-?\d+\.?\d*$/.test(value)) {
-      inferredType = 'number';
-    } else if (value.startsWith('[') || value.startsWith('{')) {
+      inferredType = "number";
+    } else if (value.startsWith("[") || value.startsWith("{")) {
       const parsed = JsonHelper.parse(value);
       if (parsed) {
-        inferredType = 'object';
+        inferredType = "object";
       }
     }
   }
@@ -25,19 +28,19 @@ export const parseFieldValue = (value: string, property?: SchemaProperty): unkno
 
   try {
     switch (inferredType) {
-      case 'number': {
+      case "number": {
         const parsed = Number(value);
         return isNaN(parsed) ? value : parsed;
       }
-      case 'boolean':
-        return value === 'true' || value === '1';
-      case 'object':
+      case "boolean":
+        return value === "true" || value === "1";
+      case "object":
         return JsonHelper.parse(value) || value;
-      case 'integer': {
+      case "integer": {
         const parsed = Number(value);
         return isNaN(parsed) ? value : parsed;
       }
-      case 'array':
+      case "array":
         return JsonHelper.parse(value) || value;
       default:
         return value;
@@ -47,23 +50,35 @@ export const parseFieldValue = (value: string, property?: SchemaProperty): unkno
   }
 };
 
-export const reconstructFileBuffer = (serializedFile: SerializedFile): ProcessedFile => {
+export const reconstructFileBuffer = (
+  serializedFile: SerializedFile,
+): ProcessedFile => {
   const fileData = serializedFile.file;
   return {
     ...fileData,
-    buffer: fileData?.buffer ? Buffer.from(fileData.buffer as any) : Buffer.from([]),
+    buffer: fileData?.buffer
+      ? Buffer.from(fileData.buffer as any)
+      : Buffer.from([]),
   };
 };
 
 export const parseFieldPath = (fieldName: string): string[] => {
-  return fieldName.replace(/\[/g, '.').replace(/\]/g, '').split('.').filter(Boolean);
+  return fieldName
+    .replace(/\[/g, ".")
+    .replace(/\]/g, "")
+    .split(".")
+    .filter(Boolean);
 };
 
 export const hasArrayNotation = (fieldName: string): boolean => {
   return /\[\d+\]/.test(fieldName);
 };
 
-export const setNestedValue = (obj: Record<string, unknown>, path: string[], value: unknown): void => {
+export const setNestedValue = (
+  obj: Record<string, unknown>,
+  path: string[],
+  value: unknown,
+): void => {
   let current: any = obj;
 
   for (let i = 0; i < path.length - 1; i++) {

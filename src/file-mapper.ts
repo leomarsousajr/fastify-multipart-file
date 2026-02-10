@@ -1,7 +1,7 @@
-import { File } from './file';
-import { FileUpload } from './types';
-import path from 'node:path';
-import { UuidHelper } from './helpers/uuid.helper';
+import { File } from "./file";
+import { FileUpload } from "./types";
+import path from "node:path";
+import { UuidHelper } from "./utils/uuid.helper";
 
 export class FileMapper {
   static from(uploadFile: FileUpload): File {
