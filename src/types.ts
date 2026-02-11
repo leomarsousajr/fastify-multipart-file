@@ -26,6 +26,7 @@ export interface SchemaProperty {
   maxLength?: number;
   accept?: string[];
   default?: unknown;
+  items?: SchemaProperty;
   [key: string]: unknown;
 }
 
@@ -34,7 +35,7 @@ export interface SchemaBody {
 }
 
 export interface SerializedFile {
-  type: 'file';
+  type: "file";
   file: ProcessedFile;
 }
 
@@ -42,7 +43,7 @@ export interface ProcessedFile {
   name?: string;
   mimetype?: string;
   encoding?: string;
-  buffer: Buffer | { type: 'Buffer'; data: number[] };
+  buffer: Buffer | { type: "Buffer"; data: number[] };
   size: number;
   originalName?: string;
 }

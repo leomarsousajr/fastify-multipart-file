@@ -1,12 +1,7 @@
-import { isValidFileField } from "../validators";
-import { processFileField } from "../file-processor";
-import {
-  parseFieldValue,
-  parseFieldPath,
-  hasArrayNotation,
-  setNestedValue,
-} from "../parsers";
 import { MultipartField, SchemaBody } from "../types";
+import { processArrayField } from "./helpers/process-array-field";
+import { processSingleFileField } from "./helpers/process-single-file-field";
+import { processTextField } from "./helpers/process-text-field";
 
 export async function preValidationHook(request: any): Promise<void> {
   if (!request.isMultipart()) {
@@ -21,44 +16,30 @@ export async function preValidationHook(request: any): Promise<void> {
     return;
   }
 
-  const body = (request.body || {}) as Record<string, MultipartField>;
+  const body = (request.body || {}) as Record<
+    string,
+    MultipartField | MultipartField[]
+  >;
   const processedBody: Record<string, unknown> = {};
 
   for (const [fieldName, field] of Object.entries(body)) {
     const property = properties[fieldName];
 
-    if (isValidFileField(field as MultipartField, property)) {
-      if (hasArrayNotation(fieldName)) {
-        const path = parseFieldPath(fieldName);
-        const value = processFileField(
-          field as MultipartField,
-          property,
-          fieldName,
-        );
-        setNestedValue(processedBody, path, value);
-      } else {
-        processedBody[fieldName] = processFileField(
-          field as MultipartField,
-          property,
-          fieldName,
-        );
-      }
+    if (Array.isArray(field)) {
+      processedBody[fieldName] = processArrayField(field, property, fieldName);
       continue;
     }
 
-    const typedField = field as MultipartField;
-    if (typedField?.value !== undefined) {
-      const parsedValue = property
-        ? parseFieldValue(typedField.value, property)
-        : typedField.value;
-
-      if (hasArrayNotation(fieldName)) {
-        const path = parseFieldPath(fieldName);
-        setNestedValue(processedBody, path, parsedValue);
-      } else {
-        processedBody[fieldName] = parsedValue;
+    if (field?.type === "file" && property) {
+      const result = processSingleFileField(field, property, fieldName);
+      if (result.handled) {
+        processedBody[fieldName] = result.value;
+        continue;
       }
     }
+
+    processTextField(field as MultipartField, property, fieldName, processedBody);
   }
+
   request.body = processedBody;
 }

@@ -1,18 +1,22 @@
-import { UnprocessedEntityError } from './errors/unprocessed-entity.error';
-import { File } from './file';
-import { MultipartField, SchemaProperty } from './types';
+import { UnprocessedEntityError } from "./errors/unprocessed-entity.error";
+import { File } from "./file";
+import { SchemaProperty } from "./types";
 
-export const isValidFileField = (field: MultipartField, property: SchemaProperty | undefined): boolean => {
+export const isValidFile = (item: SchemaProperty): boolean => {
   return Boolean(
-    field?.type === 'file' &&
-      property?.type === 'string' &&
-      property?.format === 'binary' &&
-      property?.maxLength &&
-      property?.accept,
+    item.type === "string" &&
+    item.format === "binary" &&
+    item.typeFile &&
+    item.maxLength &&
+    item.accept,
   );
 };
 
-export const validateFileSize = (file: File, maxSize: number, fieldName: string): void => {
+export const validateFileSize = (
+  file: File,
+  maxSize: number,
+  fieldName: string,
+): void => {
   if (file.size > maxSize) {
     const error = new UnprocessedEntityError([
       `File size exceeds the maximum allowed size of ${maxSize} bytes.`,
@@ -22,10 +26,14 @@ export const validateFileSize = (file: File, maxSize: number, fieldName: string)
   }
 };
 
-export const validateFileMimeType = (file: File, allowedTypes: string[], fieldName: string): void => {
+export const validateFileMimeType = (
+  file: File,
+  allowedTypes: string[],
+  fieldName: string,
+): void => {
   if (!file.mimetype || !allowedTypes.includes(file.mimetype)) {
     const error = new UnprocessedEntityError([
-      `Invalid file type. Allowed types: ${allowedTypes.join(', ')}.`,
+      `Invalid file type. Allowed types: ${allowedTypes.join(", ")}.`,
     ]);
     error.validation[0].field = fieldName;
     throw error;

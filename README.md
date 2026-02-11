@@ -113,7 +113,7 @@ fastify.post("/nested", {
 
 ### Multiple File Uploads
 
-The plugin supports multiple file uploads in the same request using different field names or array notation.
+The plugin supports multiple file uploads in the same request using different field names or array of files.
 
 #### Option 1: Different Field Names
 
@@ -159,29 +159,19 @@ fastify.post("/upload-multiple", {
   handler: async (request, reply) => {
     const { name, image, document, thumbnail } = request.body;
 
-    // Process multiple files
+    // Each field is a single File object
     console.log("Image:", image.originalName, image.size);
     console.log("Document:", document.originalName, document.size);
     console.log("Thumbnail:", thumbnail.originalName, thumbnail.size);
 
-    // Save files to storage
-    await saveFile(image.buffer, image.name);
-    await saveFile(document.buffer, document.name);
-    await saveFile(thumbnail.buffer, thumbnail.name);
-
-    return {
-      success: true,
-      files: {
-        image: image.name,
-        document: document.name,
-        thumbnail: thumbnail.name,
-      },
-    };
+    return { success: true };
   },
 });
 ```
 
 #### Option 2: Array of Files
+
+Use `S.array().items(...)` to accept multiple files in a single field. The client sends multiple files with the same field name (e.g., multiple `<input type="file" name="images" multiple />`).
 
 ```typescript
 fastify.post("/upload-array", {
@@ -189,37 +179,17 @@ fastify.post("/upload-array", {
     body: S.object()
       .prop("title", S.string().required())
       .prop(
-        'images[0]',
-        S.object().raw({
-          type: 'string',
-          typeFile: true,
-          format: 'binary',
-          description: 'Image file (max size: 5MB)',
-          maxLength: 5 * 1024 * 1024,
-          accept: ["image/jpeg", "image/png"],
-        }),
-      )
-      .prop(
-        'images[1]',
-        S.object().raw({
-          type: 'string',
-          typeFile: true,
-          format: 'binary',
-          description: 'Image file (max size: 5MB)',
-          maxLength: 5 * 1024 * 1024,
-          accept: ["image/jpeg", "image/png"],
-        }),
-      )
-      .prop(
-        'images[2]',
-        S.object().raw({
-          type: 'string',
-          typeFile: true,
-          format: 'binary',
-          description: 'Image file (max size: 5MB)',
-          maxLength: 5 * 1024 * 1024,
-          accept: ["image/jpeg", "image/png"],
-        }),
+        'images',
+        S.array().items(
+          S.object().raw({
+            type: 'string',
+            typeFile: true,
+            format: 'binary',
+            description: 'Image file (max size: 5MB)',
+            maxLength: 5 * 1024 * 1024,
+            accept: ["image/jpeg", "image/png"],
+          }),
+        ),
       ),
   },
   handler: async (request, reply) => {
@@ -228,22 +198,16 @@ fastify.post("/upload-array", {
     // images is an array of File objects
     console.log(`Received ${images.length} images for: ${title}`);
 
-    const uploadedFiles = [];
     for (const [index, image] of images.entries()) {
       console.log(`Image ${index}:`, image.originalName, image.size);
-      await saveFile(image.buffer, image.name);
-      uploadedFiles.push(image.name);
     }
 
-    return {
-      success: true,
-      title,
-      filesCount: images.length,
-      files: uploadedFiles,
-    };
+    return { success: true, filesCount: images.length };
   },
 });
 ```
+
+> **Note:** If the client sends a single file for an array field, the plugin automatically wraps it in an array. If the client sends an array for a single file field, a 422 validation error is thrown.
 
 #### Option 3: Mixed Files and Data
 
@@ -267,26 +231,17 @@ fastify.post("/product", {
         }),
       )
       .prop(
-        'gallery[0]',
-        S.object().raw({
-          type: 'string',
-          typeFile: true,
-          format: 'binary',
-          description: 'Image file (max size: 3MB)',
-          maxLength: 3 * 1024 * 1024,
-          accept: ["image/jpeg", "image/png"],
-        }),
-      )
-      .prop(
-        'gallery[1]',
-        S.object().raw({
-          type: 'string',
-          typeFile: true,
-          format: 'binary',
-          description: 'Image file (max size: 3MB)',
-          maxLength: 3 * 1024 * 1024,
-          accept: ["image/jpeg", "image/png"],
-        }),
+        'gallery',
+        S.array().items(
+          S.object().raw({
+            type: 'string',
+            typeFile: true,
+            format: 'binary',
+            description: 'Image file (max size: 3MB)',
+            maxLength: 3 * 1024 * 1024,
+            accept: ["image/jpeg", "image/png"],
+          }),
+        ),
       )
       .prop(
         'manual',
@@ -304,7 +259,9 @@ fastify.post("/product", {
     const { name, price, description, inStock, mainImage, gallery, manual } =
       request.body;
 
-    // Save product data
+    // mainImage: single File object
+    // gallery: array of File objects
+    // manual: single File object
     const product = {
       name, // string
       price, // number (auto-converted)
